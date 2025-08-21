@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adk-bq-audit"
+version = "0.1.0"
+description = "ADK-style BigQuery audit CLI that finds most expensive queries and exports job stats to CSV"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "google-cloud-bigquery>=3.25.0",
+  "google-auth>=2.32.0",
+  "google-auth-oauthlib>=1.2.0",
+  "pytz>=2024.1",
+]
+
+[project.scripts]
+bq-adk-audit = "adk_bq_audit.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["adk_bq_audit*"]
+exclude = ["adk_app*", "tools*"]
+
+

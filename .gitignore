@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual env
+.venv/
+
+# Editors/OS
+.DS_Store
+.vscode/
+.idea/
+
+# Build artifacts
+build/
+dist/
+
+# Local outputs
+*.csv
+adk_app/bq_job_stats*.csv
+pkg_bq_job_stats.csv
+
+# Credentials (do not commit)
+credentials.json
+.service_account.json
