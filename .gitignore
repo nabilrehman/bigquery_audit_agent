@@ -5,6 +5,7 @@ __pycache__/
 
 # Virtual env
 .venv/
+venv/
 
 # Editors/OS
 .DS_Store
