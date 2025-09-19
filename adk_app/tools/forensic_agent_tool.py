@@ -100,6 +100,7 @@ def forensic_agent_tool(params: ForensicInput) -> ForensicOutput:
                              .replace("{SCHEMA_BLOCK}", schema_block or "[Schema not found]") \
                              .replace("{FULL_MD}", md_text)
 
+    # ADK-first: use an LLM agent, fallback to Google AI API only if no text
     agent = Agent(
         name="forensic_bq_finops",
         model="gemini-2.5-pro",
@@ -124,7 +125,6 @@ def forensic_agent_tool(params: ForensicInput) -> ForensicOutput:
 
     import asyncio
     text = asyncio.run(_run())
-    # Fallback to Google AI API if ADK produced no text
     if not text:
         try:
             from google.genai import Client  # type: ignore
