@@ -10,11 +10,11 @@ Usage: ./run.sh <command> [args]
 
 Commands:
   setup                          Create venv and install package (editable)
-  audit [--project P] [--days D] Run audit CLI and write CSV (default 3 days)
+  audit [--project P] [--days D] Run audit CLI and write CSV (default 30 days)
   forensic-top1                  Generate forensic report for top 1 job
   forensic-top10                 Generate one concatenated report for top 10 local jobs
-  inspector                      Run all-job inspector summary over last 3 days
-  all                            Run audit, analysis PDF, schema report, optimizer, inspector, and top10 bundle
+  inspector                      Run all-job inspector summary over last 30 days
+  all                            Run audit, analysis PDF, schema+optimizer, inspector, and top10 bundle
 
 Environment:
   GOOGLE_CLOUD_PROJECT           GCP project (defaults from `gcloud config get-value project`)
@@ -46,7 +46,7 @@ cmd_setup() {
 cmd_audit() {
   cd "$ROOT"; source .venv/bin/activate; ensure_project
   local PROJECT="${GOOGLE_CLOUD_PROJECT}"
-  local DAYS=3
+  local DAYS=30
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --project) PROJECT="$2"; shift 2;;
@@ -68,7 +68,7 @@ from adk_app.schemas import ForensicInput, QueryAnalysisInput
 proj=os.environ['GOOGLE_CLOUD_PROJECT']
 csv_path='./bq_job_stats_today.csv'
 if not os.path.exists(csv_path):
-  os.system(f"python -m adk_bq_audit.cli --project '{proj}' --days 3 --locations US --limit 5000 --topn 100 --outfile {csv_path}")
+  os.system(f"python -m adk_bq_audit.cli --project '{proj}' --days 30 --locations US --limit 5000 --topn 100 --outfile {csv_path}")
 with open(csv_path) as f:
   rows=list(csv.DictReader(f))
 rows=[r for r in rows if r.get('query')]
@@ -95,7 +95,7 @@ from adk_app.schemas import ForensicInput
 proj=os.environ['GOOGLE_CLOUD_PROJECT']
 csv_path='./bq_job_stats_today.csv'
 if not os.path.exists(csv_path):
-  os.system(f"python -m adk_bq_audit.cli --project '{proj}' --days 3 --locations US --limit 5000 --topn 100 --outfile {csv_path}")
+  os.system(f"python -m adk_bq_audit.cli --project '{proj}' --days 30 --locations US --limit 5000 --topn 100 --outfile {csv_path}")
 with open(csv_path) as f:
   rows=list(csv.DictReader(f))
 rows=[r for r in rows if r.get('query')]
@@ -128,7 +128,7 @@ import os
 from adk_app.tools.all_job_inspector_tool import all_job_inspector_tool
 from adk_app.schemas import AllJobsInspectorInput
 proj=os.environ['GOOGLE_CLOUD_PROJECT']
-res=all_job_inspector_tool(AllJobsInspectorInput(project=proj, region='US', days=3, limit=200, output_path='./analysis_out/all_job_inspector.md'))
+res=all_job_inspector_tool(AllJobsInspectorInput(project=proj, region='US', days=30, limit=200, output_path='./analysis_out/all_job_inspector.md'))
 print('Report ->', res.report_path)
 print('\nPREVIEW:\n', res.text_preview)
 PY
@@ -138,7 +138,7 @@ cmd_all() {
   cd "$ROOT"; source .venv/bin/activate; ensure_project
   PROJECT="${GOOGLE_CLOUD_PROJECT}"
   echo "[1/6] Audit jobs..."
-  python -m adk_bq_audit.cli --project "$PROJECT" --days 3 --locations US --limit 5000 --topn 100 --outfile ./bq_job_stats_today.csv | cat
+  python -m adk_bq_audit.cli --project "$PROJECT" --days 30 --locations US --limit 5000 --topn 100 --outfile ./bq_job_stats_today.csv | cat
   echo "[2/6] Analysis PDF..."
   py <<'PY'
 import os
@@ -172,7 +172,7 @@ import os
 from adk_app.tools.all_job_inspector_tool import all_job_inspector_tool
 from adk_app.schemas import AllJobsInspectorInput
 proj=os.environ['GOOGLE_CLOUD_PROJECT']
-res=all_job_inspector_tool(AllJobsInspectorInput(project=proj, region='US', days=3, limit=200, output_path='./analysis_out/all_job_inspector.md'))
+res=all_job_inspector_tool(AllJobsInspectorInput(project=proj, region='US', days=30, limit=200, output_path='./analysis_out/all_job_inspector.md'))
 print('Inspector ->', res.report_path)
 PY
   echo "[5/6] Top10 forensic bundle..."
