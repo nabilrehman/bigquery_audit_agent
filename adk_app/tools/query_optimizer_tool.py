@@ -27,33 +27,33 @@ def _local_rules(sql: str) -> List[str]:
 def query_optimizer_tool(params: OptimizeInput) -> OptimizeOutput:
     sql = params.sql or ""
 
-        # ADK/Vertex-first (as before); fall back to local rules
-        recs: List[str] = []
-        try:
-            project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GCLOUD_PROJECT")
-            location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-            if project:
-                from vertexai import init as vertexai_init  # type: ignore
-                from vertexai.generative_models import GenerativeModel, GenerationConfig  # type: ignore
+    # ADK/Vertex-first (as before); fall back to local rules
+    recs: List[str] = []
+    try:
+        project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("GCLOUD_PROJECT")
+        location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+        if project:
+            from vertexai import init as vertexai_init  # type: ignore
+            from vertexai.generative_models import GenerativeModel, GenerationConfig  # type: ignore
 
-                vertexai_init(project=project, location=location)
-                model = GenerativeModel("gemini-2.5-pro")
-                prompt = (
-                    f"{SYSTEM_PROMPT}\n\n"
-                    "Return a concise list of bullet-point recommendations only.\n"
-                    "If you suggest schema changes, explain the exact BigQuery features to use.\n\n"
-                    "SQL to optimize:\n"
-                    f"```sql\n{sql}\n```\n"
-                )
-                response = model.generate_content(
-                    [prompt],
-                    generation_config=GenerationConfig(temperature=0.2, max_output_tokens=1024),
-                )
-                text = getattr(response, "text", None) or ""
-                lines = [ln.strip("- ") for ln in text.splitlines()]
-                recs = [ln for ln in lines if ln]
-        except Exception:
-            recs = []
+            vertexai_init(project=project, location=location)
+            model = GenerativeModel("gemini-2.5-pro")
+            prompt = (
+                f"{SYSTEM_PROMPT}\n\n"
+                "Return a concise list of bullet-point recommendations only.\n"
+                "If you suggest schema changes, explain the exact BigQuery features to use.\n\n"
+                "SQL to optimize:\n"
+                f"```sql\n{sql}\n```\n"
+            )
+            response = model.generate_content(
+                [prompt],
+                generation_config=GenerationConfig(temperature=0.2, max_output_tokens=1024),
+            )
+            text = getattr(response, "text", None) or ""
+            lines = [ln.strip("- ") for ln in text.splitlines()]
+            recs = [ln for ln in lines if ln]
+    except Exception:
+        recs = []
 
     if not recs:
         recs = _local_rules(sql)
