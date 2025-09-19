@@ -172,9 +172,9 @@ PY
   py <<'PY'
 import os
 from adk_app.tools.all_job_inspector_tool import all_job_inspector_tool
-from adk_app.schemas import AllJobInspectorInput
+from adk_app.schemas import AllJobsInspectorInput
 proj=os.environ['GOOGLE_CLOUD_PROJECT']
-res=all_job_inspector_tool(AllJobInspectorInput(project=proj, days=3, locations=["US","EU"], limit=10))
+res=all_job_inspector_tool(AllJobsInspectorInput(project=proj, region='US', days=3, limit=10, output_path='./analysis_out/all_job_inspector.md'))
 print('Inspector ->', res.report_path)
 PY
   echo "[5/6] Top10 forensic bundle..."
