@@ -103,7 +103,7 @@ def forensic_agent_tool(params: ForensicInput) -> ForensicOutput:
     # ADK-first: use an LLM agent, fallback to Google AI API only if no text
     agent = Agent(
         name="forensic_bq_finops",
-        model="gemini-2.5-pro",
+        model="gemini-2.5-flash-lite",
         instruction="Generate the requested forensic report strictly following the user's template.",
         tools=[],
     )

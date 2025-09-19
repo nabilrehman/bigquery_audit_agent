@@ -105,7 +105,7 @@ def all_job_inspector_tool(params: AllJobsInspectorInput) -> AllJobsInspectorOut
 
     agent = Agent(
         name="all_job_inspector",
-        model="gemini-2.5-pro",
+        model="gemini-2.5-flash-lite",
         instruction="Summarize and optimize job patterns across many jobs.",
         tools=[],
     )

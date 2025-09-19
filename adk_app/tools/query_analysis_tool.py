@@ -42,7 +42,7 @@ EXTRACT_SYSTEM_PROMPT = (
 def _llm_extract_tables(sql: str) -> List[ExtractedTable]:
     agent = Agent(
         name="table_extractor",
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash-lite",
         instruction=EXTRACT_SYSTEM_PROMPT,
         tools=[],
     )

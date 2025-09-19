@@ -101,9 +101,9 @@ def _query_analysis_latest_local_entry(
 
 
 def load_agent() -> Agent:
-    agent = Agent(
-        name="bq_audit_agent",
-        model="gemini-2.5-pro",
+        agent = Agent(
+            name="bq_audit_agent",
+            model="gemini-2.5-flash-lite",
         instruction=(
             "You are a BigQuery audit agent. Use tools to fetch job stats and summarize top-N costly queries."
         ),
@@ -121,9 +121,9 @@ def load_agent() -> Agent:
 
 def load_simple_optimizer_agent() -> Agent:
     """A lightweight agent that takes a SQL and asks Gemini for optimization tips."""
-    agent = Agent(
-        name="bq_sql_optimizer",
-        model="gemini-2.0-flash",
+        agent = Agent(
+            name="bq_sql_optimizer",
+            model="gemini-2.5-flash-lite",
         instruction=(
             "You are a BigQuery SQL optimization assistant. Given a SQL query, provide concise, actionable"
             " recommendations to reduce cost and improve performance. Consider partitioning/clustering, pruning,"

@@ -37,7 +37,7 @@ def analyze_tool(params: AnalyzeInput) -> AnalyzeOutput:
     # Build an LLM agent with a built-in code executor
     agent = Agent(
         name="csv_analysis_agent",
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash-lite",
         instruction=ANALYZE_SYSTEM_PROMPT,
         description="Analyzes CSV data with pandas and matplotlib and saves plots.",
         code_executor=BuiltInCodeExecutor(),
