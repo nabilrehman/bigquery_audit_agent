@@ -35,7 +35,7 @@ def analyze_tool(params: AnalyzeInput) -> AnalyzeOutput:
     target_pdf = os.path.abspath(os.path.join(out_dir, f"analysis_report_{ts}.pdf"))
 
     # Build an LLM agent with a built-in code executor
-        agent = Agent(
+    agent = Agent(
         name="csv_analysis_agent",
         model="gemini-2.0-flash",
         instruction=ANALYZE_SYSTEM_PROMPT,
@@ -74,12 +74,11 @@ def analyze_tool(params: AnalyzeInput) -> AnalyzeOutput:
         return pdfs
 
     import asyncio
-
-        try:
-            plots = asyncio.run(_run())
-        except Exception:
-            # Explicit fallback to Google AI API if ADK path fails due to missing Vertex setup
-            plots = []
+    try:
+        plots = asyncio.run(_run())
+    except Exception:
+        # Explicit fallback to Google AI API if ADK path fails due to missing Vertex setup
+        plots = []
 
     # If the LLM did not write to the timestamped target, force-generate our sleek report there
     if not os.path.exists(target_pdf):
