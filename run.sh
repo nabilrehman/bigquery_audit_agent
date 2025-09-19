@@ -154,12 +154,11 @@ from adk_app.schemas import AnalyzeInput
 res=analyze_tool(AnalyzeInput(csv_path='./bq_job_stats_today.csv', output_dir='./analysis_out'))
 print('PDF(s):', res.plots)
 PY
-  echo "[3/6] Top1 schema report + optimizer..."
+  echo "[3/6] Top1 schema report..."
   py <<'PY'
 import os, csv
 from adk_app.tools.query_analysis_tool import query_analysis_tool
-from adk_app.tools.query_optimizer_tool import query_optimizer_tool
-from adk_app.schemas import QueryAnalysisInput, OptimizeInput
+from adk_app.schemas import QueryAnalysisInput
 proj=os.environ['GOOGLE_CLOUD_PROJECT']
 rows=list(csv.DictReader(open('./bq_job_stats_today.csv')))
 rows=[r for r in rows if r.get('query')]
@@ -168,10 +167,6 @@ job=rows[0]
 sql=job['query']; job_id=job['job_id']
 qa=query_analysis_tool(QueryAnalysisInput(sql=sql, project=proj, job_id=job_id))
 print('Schema report ->', qa.metadata_file)
-opt=query_optimizer_tool(OptimizeInput(sql=sql))
-with open('./analysis_out/optimizer_top1.txt','w') as f:
-  for rec in opt.recommendations: f.write(f"- {rec}\n")
-print('Optimizer ->', os.path.abspath('./analysis_out/optimizer_top1.txt'))
 PY
   echo "[4/6] All-job inspector..."
   py <<'PY'
