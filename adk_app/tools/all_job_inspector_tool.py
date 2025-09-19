@@ -22,9 +22,32 @@ PROMPT = (
 
 
 def _fetch_jobs(project: str, region: str, days: int, limit: int) -> List[bigquery.table.Row]:
+    """Return a compact projection of jobs to keep LLM input within token limits."""
     client = bigquery.Client(project=project)
     sql = f"""
-    SELECT j.*, stage.*, timeline_entry.*, ref_table.*
+    SELECT
+      j.job_id,
+      j.user_email,
+      j.creation_time,
+      j.total_bytes_billed,
+      j.total_slot_ms,
+      j.statement_type,
+      j.query,
+      -- Compact stage info
+      stage.name AS stage_name,
+      stage.slot_ms AS stage_slot_ms,
+      stage.records_read AS stage_records_read,
+      stage.records_written AS stage_records_written,
+      -- Compact timeline info
+      timeline_entry.elapsed_ms AS t_elapsed_ms,
+      timeline_entry.total_slot_ms AS t_total_slot_ms,
+      timeline_entry.pending_units AS t_pending_units,
+      timeline_entry.completed_units AS t_completed_units,
+      timeline_entry.active_units AS t_active_units,
+      -- Referenced table identifiers
+      ref_table.project_id AS ref_project,
+      ref_table.dataset_id AS ref_dataset,
+      ref_table.table_id AS ref_table
     FROM `region-{region.lower()}`.INFORMATION_SCHEMA.JOBS AS j
     LEFT JOIN UNNEST(j.job_stages) AS stage
     LEFT JOIN UNNEST(j.timeline) AS timeline_entry
@@ -38,17 +61,40 @@ def _fetch_jobs(project: str, region: str, days: int, limit: int) -> List[bigque
 
 
 def _rows_to_text(rows: List[bigquery.table.Row]) -> str:
+    """Format rows for LLM input, with strict truncation to avoid token overflow."""
+    whitelist = {
+        "job_id","user_email","creation_time","total_bytes_billed","total_slot_ms","statement_type",
+        "query","stage_name","stage_slot_ms","stage_records_read","stage_records_written",
+        "t_elapsed_ms","t_total_slot_ms","t_pending_units","t_completed_units","t_active_units",
+        "ref_project","ref_dataset","ref_table",
+    }
+    max_rows = 120  # hard cap
+    max_chars = 250_000  # cap total characters passed to LLM
     lines: List[str] = []
-    for r in rows[:300]:
+    total_len = 0
+    for idx, r in enumerate(rows):
+        if idx >= max_rows:
+            break
         parts = []
         for k in r.keys():
+            if k not in whitelist:
+                continue
             v = r.get(k)
-            if isinstance(v, str) and len(v) > 500:
-                v = v[:500] + " ... (truncated)"
+            if k == "query" and isinstance(v, str):
+                v = v.replace("\n", " ")
+                if len(v) > 400:
+                    v = v[:400] + " ..."
+            elif isinstance(v, str) and len(v) > 200:
+                v = v[:200] + " ..."
             parts.append(f"{k}={v}")
-        lines.append(" | ".join(parts))
-    if len(rows) > 300:
-        lines.append(f"... and {len(rows)-300} more rows")
+        line = " | ".join(parts)
+        if total_len + len(line) > max_chars:
+            lines.append("... (truncated for length) ...")
+            break
+        lines.append(line)
+        total_len += len(line)
+    if len(rows) > idx + 1:
+        lines.append(f"... and {len(rows)-(idx+1)} more rows")
     return "\n".join(lines)
 
 
