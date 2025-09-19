@@ -144,8 +144,8 @@ PY
 cmd_all() {
   cd "$ROOT"; source .venv/bin/activate; ensure_project; ensure_location
   PROJECT="${GOOGLE_CLOUD_PROJECT}"
-  echo "[1/6] Audit jobs..."
-  python -m adk_bq_audit.cli --project "$PROJECT" --days 30 --locations US --limit 5000 --topn 100 --outfile ./bq_job_stats_today.csv | cat
+  echo "[1/6] Audit jobs (last 3 days, top 10)..."
+  python -m adk_bq_audit.cli --project "$PROJECT" --days 3 --locations US --limit 500 --topn 10 --outfile ./bq_job_stats_today.csv | cat
   echo "[2/6] Analysis PDF..."
   py <<'PY'
 import os
@@ -168,13 +168,13 @@ sql=job['query']; job_id=job['job_id']
 qa=query_analysis_tool(QueryAnalysisInput(sql=sql, project=proj, job_id=job_id))
 print('Schema report ->', qa.metadata_file)
 PY
-  echo "[4/6] All-job inspector..."
+  echo "[4/6] All-job inspector (last 3 days, limit 10)..."
   py <<'PY'
 import os
 from adk_app.tools.all_job_inspector_tool import all_job_inspector_tool
-from adk_app.schemas import AllJobsInspectorInput
+from adk_app.schemas import AllJobInspectorInput
 proj=os.environ['GOOGLE_CLOUD_PROJECT']
-res=all_job_inspector_tool(AllJobsInspectorInput(project=proj, region='US', days=30, limit=200, output_path='./analysis_out/all_job_inspector.md'))
+res=all_job_inspector_tool(AllJobInspectorInput(project=proj, days=3, locations=["US","EU"], limit=10))
 print('Inspector ->', res.report_path)
 PY
   echo "[5/6] Top10 forensic bundle..."
