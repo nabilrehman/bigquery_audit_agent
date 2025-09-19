@@ -444,6 +444,56 @@ def _table_api_details(client: bigquery.Client, project: str, dataset: str, tabl
     return lines
 
 
+def _job_diagnostics_compact(client: bigquery.Client, project: str, job_id: str) -> List[str]:
+    # Compact diagnostic query to avoid large payloads and scans
+    sql = f"""
+    SELECT
+      j.job_id,
+      j.user_email,
+      j.job_type,
+      j.state,
+      j.error_result,
+      j.start_time,
+      j.end_time,
+      j.total_slot_ms,
+      j.total_bytes_billed,
+      j.total_bytes_processed,
+      j.cache_hit,
+      j.statement_type,
+      SUBSTR(j.query, 1, 1000) AS query_snippet,
+      -- limited arrays as structs
+      ARRAY(SELECT AS STRUCT s.name, s.slot_ms, s.records_read, s.records_written FROM UNNEST(j.job_stages) AS s LIMIT 3) AS job_stages_limited,
+      ARRAY(SELECT AS STRUCT t.elapsed_ms, t.total_slot_ms, t.active_units FROM UNNEST(j.timeline) AS t LIMIT 3) AS timeline_limited,
+      ARRAY(SELECT AS STRUCT r.project_id, r.dataset_id, r.table_id FROM UNNEST(j.referenced_tables) AS r LIMIT 3) AS referenced_tables_limited
+    FROM `region-us`.INFORMATION_SCHEMA.JOBS AS j
+    WHERE j.job_id = @job_id
+    LIMIT 1
+    """
+    job = client.query(sql, job_config=bigquery.QueryJobConfig(
+        query_parameters=[bigquery.ScalarQueryParameter("job_id", "STRING", job_id)]
+    ))
+    rows = list(job.result())
+    lines: List[str] = []
+    if rows:
+        r = rows[0]
+        lines.append("## Job Diagnostics (compact)")
+        for k in [
+            "job_id","user_email","job_type","state","start_time","end_time",
+            "total_slot_ms","total_bytes_billed","total_bytes_processed","cache_hit","statement_type","query_snippet",
+        ]:
+            lines.append(f"{k}: {r.get(k)}")
+        lines.append("job_stages_limited:")
+        for s in (r.get("job_stages_limited") or [])[:3]:
+            lines.append(f"  - name: {s.get('name')}, slot_ms: {s.get('slot_ms')}, rr: {s.get('records_read')}, rw: {s.get('records_written')}")
+        lines.append("timeline_limited:")
+        for t in (r.get("timeline_limited") or [])[:3]:
+            lines.append(f"  - elapsed_ms: {t.get('elapsed_ms')}, total_slot_ms: {t.get('total_slot_ms')}, active_units: {t.get('active_units')}")
+        lines.append("referenced_tables_limited:")
+        for rt in (r.get("referenced_tables_limited") or [])[:3]:
+            lines.append(f"  - {rt.get('project_id')}.{rt.get('dataset_id')}.{rt.get('table_id')}")
+    return lines
+
+
 def query_analysis_tool(params: QueryAnalysisInput) -> QueryAnalysisOutput:
     # Step 1: Table extraction via LLM
     extracted = _llm_extract_tables(params.sql)
@@ -456,6 +506,8 @@ def query_analysis_tool(params: QueryAnalysisInput) -> QueryAnalysisOutput:
     seen_datasets = set()
     resolved: List[ExtractedTable] = []
     notes: List[str] = []
+    compact_mode = bool(os.environ.get("ADK_COMPACT_V2"))
+
     for t in extracted:
         proj = _resolve_project(t.project, params.project)
         # Local-only enforcement
@@ -480,17 +532,15 @@ def query_analysis_tool(params: QueryAnalysisInput) -> QueryAnalysisOutput:
         except Exception as e:
             notes.append(f"Error TABLE_OPTIONS for {proj}.{t.dataset}.{t.table}: {e}")
 
-        # Columns detailed
-        try:
-            lines.extend(_info_schema_columns_detailed(client, proj, t.dataset, t.table))
-        except Exception as e:
-            notes.append(f"Error detailed COLUMNS for {proj}.{t.dataset}.{t.table}: {e}")
-
-        # Column field paths (nested)
-        try:
-            lines.extend(_info_schema_column_field_paths(client, proj, t.dataset, t.table))
-        except Exception as e:
-            notes.append(f"Error COLUMN_FIELD_PATHS for {proj}.{t.dataset}.{t.table}: {e}")
+        if not compact_mode:
+            try:
+                lines.extend(_info_schema_columns_detailed(client, proj, t.dataset, t.table))
+            except Exception as e:
+                notes.append(f"Error detailed COLUMNS for {proj}.{t.dataset}.{t.table}: {e}")
+            try:
+                lines.extend(_info_schema_column_field_paths(client, proj, t.dataset, t.table))
+            except Exception as e:
+                notes.append(f"Error COLUMN_FIELD_PATHS for {proj}.{t.dataset}.{t.table}: {e}")
 
         # Views / Materialized views
         try:
@@ -524,44 +574,13 @@ def query_analysis_tool(params: QueryAnalysisInput) -> QueryAnalysisOutput:
     # Optional: job diagnostics for a specific job_id from regional INFORMATION_SCHEMA.JOBS
     if params.job_id:
         try:
-            # Try both US and EU; stop at first which returns rows
-            diag_lines: List[str] = ["## Job Diagnostics", f"job_id: {params.job_id}"]
-            got = False
-            for region in ("US", "EU"):
-                try:
-                    sql = f"""
-                    SELECT j.*, stage.*, timeline_entry.*, ref_table.*
-                    FROM `region-{region.lower()}`.INFORMATION_SCHEMA.JOBS AS j
-                    LEFT JOIN UNNEST(j.job_stages) AS stage
-                    LEFT JOIN UNNEST(j.timeline) AS timeline_entry
-                    LEFT JOIN UNNEST(j.referenced_tables) AS ref_table
-                    WHERE j.job_id = @job_id
-                    LIMIT 200
-                    """
-                    job = client.query(sql, job_config=bigquery.QueryJobConfig(
-                        query_parameters=[bigquery.ScalarQueryParameter("job_id", "STRING", params.job_id)]
-                    ))
-                    rows = list(job.result())
-                    if rows:
-                        diag_lines.append(f"region: {region}")
-                        # Pretty print first N rows as key: value pairs
-                        for r in rows[:50]:
-                            diag_lines.append("- row:")
-                            for k in r.keys():
-                                v = r.get(k)
-                                if isinstance(v, str) and len(v) > 500:
-                                    v = v[:500] + " ... (truncated)"
-                                diag_lines.append(f"    {k}: {v}")
-                        got = True
-                        break
-                except Exception as e:
-                    notes.append(f"Job diagnostics error ({region}): {e}")
-            if got:
-                lines.append("\n".join(diag_lines))
+            # Compact diagnostics only in v2 mode
+            if compact_mode:
+                lines.extend(_job_diagnostics_compact(client, params.project, params.job_id))
             else:
-                notes.append("Job diagnostics: no rows found in US/EU for the provided job_id.")
+                notes.append("Job diagnostics skipped (non-compact mode disabled to reduce size).")
         except Exception as e:
-            notes.append(f"Job diagnostics outer error: {e}")
+            notes.append(f"Job diagnostics error: {e}")
 
     # Write Markdown report for downstream agent consumption
     out_dir = os.path.abspath("./analysis_out")
