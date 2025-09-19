@@ -32,6 +32,13 @@ ensure_project() {
   fi
 }
 
+ensure_location() {
+  # Default Vertex AI location for LLM agents if not provided
+  if [[ -z "${GOOGLE_CLOUD_LOCATION:-}" ]]; then
+    export GOOGLE_CLOUD_LOCATION="us-central1"
+  fi
+}
+
 py() { python - "$@"; }
 
 cmd_setup() {
@@ -44,7 +51,7 @@ cmd_setup() {
 }
 
 cmd_audit() {
-  cd "$ROOT"; source .venv/bin/activate; ensure_project
+  cd "$ROOT"; source .venv/bin/activate; ensure_project; ensure_location
   local PROJECT="${GOOGLE_CLOUD_PROJECT}"
   local DAYS=30
   while [[ $# -gt 0 ]]; do
@@ -59,7 +66,7 @@ cmd_audit() {
 }
 
 cmd_forensic_top1() {
-  cd "$ROOT"; source .venv/bin/activate; ensure_project
+  cd "$ROOT"; source .venv/bin/activate; ensure_project; ensure_location
   py <<'PY'
 import os, csv
 from adk_app.tools.forensic_agent_tool import forensic_agent_tool
@@ -84,7 +91,7 @@ PY
 }
 
 cmd_forensic_top10() {
-  cd "$ROOT"; source .venv/bin/activate; ensure_project
+  cd "$ROOT"; source .venv/bin/activate; ensure_project; ensure_location
   py <<'PY'
 import os, csv, re, shutil
 from google.cloud import bigquery
@@ -122,7 +129,7 @@ PY
 }
 
 cmd_inspector() {
-  cd "$ROOT"; source .venv/bin/activate; ensure_project
+  cd "$ROOT"; source .venv/bin/activate; ensure_project; ensure_location
   py <<'PY'
 import os
 from adk_app.tools.all_job_inspector_tool import all_job_inspector_tool
@@ -135,7 +142,7 @@ PY
 }
 
 cmd_all() {
-  cd "$ROOT"; source .venv/bin/activate; ensure_project
+  cd "$ROOT"; source .venv/bin/activate; ensure_project; ensure_location
   PROJECT="${GOOGLE_CLOUD_PROJECT}"
   echo "[1/6] Audit jobs..."
   python -m adk_bq_audit.cli --project "$PROJECT" --days 30 --locations US --limit 5000 --topn 100 --outfile ./bq_job_stats_today.csv | cat
