@@ -177,8 +177,8 @@ proj=os.environ['GOOGLE_CLOUD_PROJECT']
 res=all_job_inspector_tool(AllJobsInspectorInput(project=proj, region='US', days=3, limit=10, output_path='./analysis_out/all_job_inspector.md'))
 print('Inspector ->', res.report_path)
 PY
-  echo "[5/6] Top10 forensic bundle..."
-  cmd_forensic_top10
+  echo "[5/6] Forensic report (top 1 job only)..."
+  cmd_forensic_top1
   echo "[6/6] Done. Outputs in ./analysis_out"
 }
 
