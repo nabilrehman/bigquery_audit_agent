@@ -8,6 +8,7 @@ from typing import List, Optional
 
 import pytz  # noqa: F401  # kept for potential timezone handling
 from google.cloud import bigquery
+from .optimizer import query_optimizer_tool
 
 
 US_REGIONAL_INFO_SCHEMA = "`region-us`.INFORMATION_SCHEMA.JOBS_BY_PROJECT"
@@ -46,6 +47,12 @@ def _parse_args() -> argparse.Namespace:
         help="Comma-separated BigQuery multi-regions to scan (choices include US,EU)",
     )
     parser.add_argument("--limit", type=int, default=1000, help="Max jobs per location (default: 1000)")
+    parser.add_argument(
+        "--topn",
+        type=int,
+        default=5,
+        help="Number of most expensive jobs to print (default: 5)",
+    )
     return parser.parse_args()
 
 
@@ -97,6 +104,19 @@ def _most_expensive(jobs: List[JobStat]) -> Optional[JobStat]:
     if not jobs:
         return None
     return max(jobs, key=lambda j: (j.total_bytes_billed, j.total_slot_ms))
+
+
+def _top_n_most_expensive(jobs: List[JobStat], n: int) -> List[JobStat]:
+    """Return the top N jobs by billed bytes (tie-breaker: total_slot_ms)."""
+    if n <= 0:
+        return []
+    return sorted(
+        jobs,
+        key=lambda j: (j.total_bytes_billed, j.total_slot_ms),
+        reverse=True,
+    )[:n]
+
+
 
 
 def _write_csv(path: str, jobs: List[JobStat]) -> None:
@@ -166,6 +186,20 @@ def main() -> int:
     print(f"  Type:     {top.statement_type}")
     print("  Query:")
     print(top.query or "")
+
+    # Print top-N most expensive queries as requested
+    topn_jobs = _top_n_most_expensive(all_jobs, args.topn)
+    if topn_jobs:
+        print(f"\nTop {len(topn_jobs)} most expensive queries:")
+        for i, j in enumerate(topn_jobs, start=1):
+            print(f"[{i}] Location: {j.location}")
+            print(f"    Job ID:   {j.job_id}")
+            print(f"    User:     {j.user_email}")
+            print(f"    Billed:   {j.total_bytes_billed:,} bytes")
+            print(f"    Slot ms:  {j.total_slot_ms:,}")
+            print(f"    Type:     {j.statement_type}")
+            print("    Query:")
+            print(j.query or "")
 
     print(f"\nWrote job CSV to: {os.path.abspath(args.outfile)}")
     return 0

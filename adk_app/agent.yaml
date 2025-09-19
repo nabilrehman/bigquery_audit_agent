@@ -1,0 +1,17 @@
+name: bq-audit-agent
+description: Agent that audits recent BigQuery jobs and suggests SQL optimizations
+model:
+  provider: vertex
+  name: gemini-2.5-pro
+  generation_config:
+    temperature: 0.2
+    max_output_tokens: 2048
+runtime:
+  max_steps: 12
+  parallel_tools: false
+  confirmations: false
+tools:
+  - name: bq_audit_tool
+  - name: query_optimizer_tool
+
+

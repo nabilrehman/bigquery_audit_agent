@@ -4,22 +4,29 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adk-bq-audit"
-version = "0.1.0"
-description = "ADK-style BigQuery audit CLI that finds most expensive queries and exports job stats to CSV"
+version = "0.2.0"
+description = "ADK-style BigQuery audit CLI + agents (optimizer, analysis, schema, forensic reports)"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
   "google-cloud-bigquery>=3.25.0",
   "google-auth>=2.32.0",
   "google-auth-oauthlib>=1.2.0",
   "pytz>=2024.1",
+  # ADK + Vertex AI (for the ADK app and Gemini optimizer tool)
+  "google-adk>=0.2.0",
+  "google-cloud-aiplatform>=1.72.0",
+  "pydantic>=2.7.0",
+  # Analysis
+  "pandas>=2.2.0",
+  "matplotlib>=3.8.0",
 ]
 
 [project.scripts]
 bq-adk-audit = "adk_bq_audit.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["adk_bq_audit*"]
-exclude = ["adk_app*", "tools*"]
+include = ["adk_bq_audit*", "adk_app*"]
+exclude = ["tools*"]
 
 

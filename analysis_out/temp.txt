@@ -1,0 +1,38 @@
+  columns_detailed:
+
+    1. id: INT64, nullable=YES, hidden=NO, generated=NEVER, system=NO
+
+    2. user: STRING, nullable=YES, hidden=NO, generated=NEVER, system=NO
+
+    3. ts: TIMESTAMP, nullable=YES, hidden=NO, generated=NEVER, system=NO
+
+    4. payload: STRING, nullable=YES, hidden=NO, generated=NEVER, system=NO
+
+  column_field_paths:
+
+    id: INT64
+
+    payload: STRING
+
+    ts: TIMESTAMP
+
+    user: STRING
+
+  api_details:
+
+    num_rows: 33296320
+
+    num_bytes: 137376905588
+
+Notes:
+Error TABLES/TABLE_STORAGE/PARTITIONS/COLUMNS for bq-demos-469816.stress_test.logs_1: 400 Invalid project ID 'stress_test'. Project IDs must contain 6-63 lowercase letters, digits, or dashes. Some project IDs also include domain name separated by a colon. IDs must start with a letter and may not end with a dash.; reason: invalid, location: stress_test.INFORMATION_SCHEMA.TABLE_STORAGE, message: Invalid project ID 'stress_test'. Project IDs must contain 6-63 lowercase letters, digits, or dashes. Some project IDs also include domain name separated by a colon. IDs must start with a letter and may not end with a dash.
+
+Location: US
+Job ID: a9ed7896-1ed8-48ee-b792-ac730b2261b4
+
+Error dataset totals for bq-demos-469816.stress_test: 400 Invalid project ID 'stress_test'. Project IDs must contain 6-63 lowercase letters, digits, or dashes. Some project IDs also include domain name separated by a colon. IDs must start with a letter and may not end with a dash.; reason: invalid, location: stress_test.INFORMATION_SCHEMA.TABLE_STORAGE, message: Invalid project ID 'stress_test'. Project IDs must contain 6-63 lowercase letters, digits, or dashes. Some project IDs also include domain name separated by a colon. IDs must start with a letter and may not end with a dash.
+
+Location: US
+Job ID: fd79a650-8d34-4d18-be1c-552d82aa53c4
+
+Skipping table: Dataset bq-demos-469816.469816 not found in current project.
